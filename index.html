@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>Entering the QR code scanning page</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600&display=swap" rel="stylesheet">
+<style>
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Prompt', sans-serif;
+  background: linear-gradient(135deg, #74ABE2, #5563DE);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  text-align: center;
+}
+
+h1
+  {
+  font-size: 2.5rem; /* ขนาดคงที่สำหรับคอม */
+  margin-bottom: 20px;
+  }
+
+p 
+  {
+  font-size: 1.2rem; /* ขนาดคงที่สำหรับคอม */
+  margin-bottom: 40px;
+  }
+  
+/* สำหรับมือถือเท่านั้นห */
+ @media (max-width: 768px) 
+  {
+      h1 { font-size: 2.5rem; }
+      p { font-size: 1.4rem; }
+  }
+
+</style>
+
+</head>
+<body>
+  <h1>กรุณารอสักครู่...</h1>
+  <p id="status">กำลังเตรียมหน้า ScanQrcode...</p>
+  
+<script>
+  const LIFF_ID  = "2009304109-dIuHHv2A";
+  const NEXT_URL = "ScanQrcode3.html";
+  
+//key ที่เก็บใน sessionStorage ชั่วคราว
+  const FLOW_KEYS = [
+    "tracking","selectedRow","scannedCodes",
+    "flow_run_id","flow_started_at","flow_last_touch"
+  ];
+
+  function setStatus(msg){ document.getElementById("status").textContent = msg; }
+
+  //สร้าง ID ไม่ซ้ำ เอาไว้ระบุรอบการทำงาน
+  function newRunId(){
+    return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  }
+  
+  //ลบข้อมูลเก่าใน sessionStorage
+  function resetFlow(){
+    FLOW_KEYS.forEach(k => sessionStorage.removeItem(k));
+  }
+
+  //ทุกครั้งที่เข้าหน้านี้ = เริ่มรอบใหม่ -ล้างข้อมูลเก่า -สร้าง run id ใหม่ -บันทึกเวลาเริ่ม
+  function startNewFlow(){
+    resetFlow();
+    const now = Date.now();
+    sessionStorage.setItem("flow_run_id", newRunId());
+    sessionStorage.setItem("flow_started_at", String(now));
+    sessionStorage.setItem("flow_last_touch", String(now));
+  }
+
+  //core function เช็คว่า Login หรือยัง
+  async function boot(){
+    try{
+      setStatus("กำลังเตรียมหน้าสแกน…");
+      await liff.init({ liffId: LIFF_ID });
+
+      if(!liff.isLoggedIn()){
+        setStatus("กำลังยืนยันตัวตน…");
+        liff.login({ redirectUri: window.location.href });
+        return;
+      }
+
+      // ทุกครั้งที่เข้าหน้านี้ = เริ่ม flow ใหม่
+      startNewFlow();
+
+      setStatus("พร้อมแล้ว! กำลังไปหน้าสแกน…");
+      window.location.replace(NEXT_URL);
+    }catch(err){
+      console.error("LIFF init error:", err);
+      alert("เกิดข้อผิดพลาดในการเริ่มระบบ");
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", boot);
+</script>
+</body> 
+</html>

@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>ขั้นตอนที่ 1 สแกน QR Code</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<style>
+/* =========================
+   Base layout
+   ========================= */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  font-family: 'Prompt', sans-serif;
+  background: black;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* =========================
+   QR Reader
+   ========================= */
+#reader {
+  width: 100%;
+  height: 75%;
+  position: relative;
+  z-index: 0;
+  display: none;
+}
+
+#overlay{
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  display: none;
+}
+
+#message {
+  position: fixed;
+  top: 20px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+
+  color: white;
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  font-weight: bold;
+  text-shadow: 0 0 5px black;
+
+  z-index: 2;
+  display: none;
+}
+
+/* =========================
+   Popup Alert
+   ========================= */
+#popupAlert {
+  display: none;
+  position: fixed;
+  inset: 0; /* top:0 right:0 bottom:0 left:0 */
+  background: rgba(0,0,0,0.6);
+
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+#popupAlertContent {
+  background: #fff;
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+
+  font-size: clamp(20px, 5vw, 32px);
+  font-weight: bold;
+  color: #333;
+
+  min-width: 300px;
+  max-width: 90%;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+}
+   
+#popupAlertText {
+  white-space: pre-line;
+  margin: 0;
+  line-height: 1.5;
+}
+/* =========================
+   Manual Input
+   ========================= */
+#manualInput {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  z-index: 5;
+  width: 90%;
+  max-width: 400px;
+}
+
+#manualInput input {
+  padding: 12px;
+  margin-top: 0px;   /* เดิม 8px -> 0 */
+
+  border-radius: 10px;
+  border: 2px solid #ccc;
+
+  font-size: 1.4rem;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  text-transform: uppercase;   /* แสดงเป็นตัวใหญ่ */
+}
+   
+#manualHint{
+  color: white;
+  font-size: 1.2rem;
+  text-align: center;
+  margin: 0 0 4px;   /* ล่างชิด */
+}
+   
+#manualSubmit {
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+
+  background: #00C300;
+  color: white;
+
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+
+  transition: all 0.2s ease-in-out;
+}
+
+#manualSubmit:hover {
+  background: #009f2b;
+  transform: scale(1.03);
+}
+
+/* =========================
+   Buttons
+   ========================= */
+.btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-green {
+  background: #00C300;
+  color: white;
+}
+.btn-green:hover {
+  background: #009f2b;
+  transform: scale(1.03);
+}
+
+.btn-gray {
+  background: #555;
+  color: white;
+}
+.btn-gray:hover {
+  background: #444;
+  transform: scale(1.03);
+}
+   
+</style>
+</head>
+<body>
+  <div id="reader"></div>
+  <div id="overlay"></div>
+  <div id="message">หมุนหน้าจอเป็นแนวตั้งเพื่อสแกน</div>
+
+  <div id="popupAlert">
+    <div id="popupAlertContent">
+      <p id="popupAlertText">ข้อความแจ้งเตือน</p>
+    </div>
+  </div>
+
+  <div id="manualInput">
+    <p id="manualHint">กรอกรหัสพัสดุด้านล่าง (หากไม่สะดวกสแกน)</p>
+    <input type="text" id="manualCode" placeholder="กรอกข้อมูลด้วยตัวเอง">
+    <div style="display:flex; 
+       gap:10px; 
+       width:100%;
+       margin-top:10px;">
+      <button id="manualSubmit" class="btn btn-green">ยืนยัน</button>
+      <button id="btnBackToCamera" class="btn btn-gray">กลับไปใช้กล้อง</button>
+    </div>
+  </div>
+
+<script>
+const FLOW_TTL_MS = 10 * 60 * 1000;
+const INDEX_URL = "index.html";
+
+function touchFlow(){ sessionStorage.setItem("flow_last_touch", String(Date.now())); }
+function isFlowExpired(){ const last = Number(sessionStorage.getItem("flow_last_touch") || 0); return !last || (Date.now() - last) > FLOW_TTL_MS; }
+function guardFlowOrRestart(){
+  const runId = sessionStorage.getItem("flow_run_id");
+  if(!runId || isFlowExpired()){
+    window.location.replace(INDEX_URL);
+    return false;
+  }
+  return true;
+}
+
+let isScanned = false;
+let html5QrCode = null;
+let isStartingCamera = false;
+let isCameraRunning = false;
+let isPopupShowing = false;
+
+async function showAlertPopup(message, redirect = false){
+  if(isPopupShowing) return;
+   
+  isPopupShowing = true;
+   
+  const popup = document.getElementById("popupAlert");
+  const text = document.getElementById("popupAlertText");
+  text.textContent = message;
+  popup.style.display = "flex";
+
+  setTimeout(async () => {
+    popup.style.display = "none";
+    isPopupShowing = false;
+     
+    if(redirect){
+      await stopCameraSafely();
+      window.location.replace("Form3.html");
+    }
+  }, 4000);
+}
+
+async function stopCameraSafely(){
+  try{
+    if(html5QrCode && isCameraRunning){
+      await html5QrCode.stop();
+      await html5QrCode.clear();
+    }
+  }catch(e){
+    console.warn("stopCameraSafely:", e);
+  }finally{
+    isCameraRunning = false;
+    isStartingCamera = false;
+  }
+}
+window.addEventListener("pagehide", () => stopCameraSafely());
+
+ function isValidTrackingCode(code){
+  code = (code || "").trim().toUpperCase();
+
+  // กันพวก URL / ลิงก์ / ข้อความที่ไม่ใช่รหัสพัสดุ
+  if(/^https?:\/\//i.test(code)) return false;
+  if(/^www\./i.test(code)) return false;
+
+  // อนุญาตเฉพาะ A-Z, 0-9 และขีด -
+  if(!/^[A-Z0-9-]+$/.test(code)) return false;
+
+  // ความยาวรหัสพัสดุแบบใช้งานจริง
+  if(code.length < 10 || code.length > 30) return false;
+
+  return true;
+}  
+
+let isNavigating = false;
+async function processCode(code){
+  if(!guardFlowOrRestart()) return;
+  touchFlow();
+
+ // บังคับว่าต้องมีข้อมูลเท่านั้น
+  code = (code || "").trim();
+  if(!code){
+    await showAlertPopup("❌ กรุณากรอกข้อมูลด้วย", false);
+    return;
+  }
+  //  กัน code สั้น/มั่วเกินไป
+   if(!isValidTrackingCode(code)){
+    await showAlertPopup("❌ เลขพัสดุไม่ถูกต้อง\nกรุณาสแกน QR Code หน้ากล่องพัสดุ\nหรือกรอกเลขพัสดุอีกครั้ง", false);
+    return;
+  }
+   
+  // เซ็ตค่า "ล่าสุด" เสมอ
+  sessionStorage.setItem('tracking', code);
+
+  if(isNavigating) return;   // กันเปลี่ยนหน้าซ้ำ
+  isNavigating = true;
+
+  await stopCameraSafely();
+  window.location.replace("Form3.html");
+}
+
+function sleep(ms){
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+   
+async function main(retryCount = 1){
+  if(!guardFlowOrRestart()) return;
+  touchFlow();
+
+  if(isStartingCamera || isCameraRunning) return;
+  isStartingCamera = true;
+
+  try{
+    if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+
+    const config = { fps: 10, qrbox: (w,h)=>{ const s=w*0.6; return {width:s,height:s}; } };
+
+    await html5QrCode.start(
+      { facingMode: "environment" },
+      config,
+      async (qrCodeMessage) => { touchFlow(); await processCode(qrCodeMessage); },
+      () => {}
+    );
+
+    isCameraRunning = true;
+  }catch(err){
+    console.error("Camera start error:", err);
+    const msg = String(err?.message || err || "").toLowerCase();
+   
+      const shouldRetry =
+      retryCount > 0 &&
+      (
+        msg.includes("notreadable") ||
+        msg.includes("abort") ||
+        msg.includes("initial") ||
+        msg.includes("video source") ||
+        msg.includes("starting video") ||
+        msg.includes("notallowed") ||
+        msg.includes("permission")
+      );
+    await stopCameraSafely();
+     if(shouldRetry){
+     await sleep(700);
+     isStartingCamera = false;
+     return main(retryCount - 1);
+   }
+    await showAlertPopup("❌ ไม่สามารถเปิดกล้องได้", false);
+  }finally{
+    isStartingCamera = false;
+  }
+}
+
+// เปิดหน้าแล้วเริ่มสแกนทันที
+window.addEventListener("pageshow", async (e) => {
+  if (e.persisted) { window.location.replace("ScanQrcode3.html"); return; }
+  if(!guardFlowOrRestart()) return;
+  touchFlow();
+
+  document.getElementById('reader').style.display = 'block';
+  document.getElementById('overlay').style.display = 'block';
+  document.getElementById('message').style.display = 'block';
+  document.getElementById('manualInput').style.display = 'flex';
+
+  isScanned = false;
+  await stopCameraSafely();
+  await sleep(500);
+  await main();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") touchFlow();
+});
+
+document.getElementById('manualCode').addEventListener('focus', async () => {
+  await stopCameraSafely();
+  document.getElementById('reader').style.display = 'none';
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('message').style.display = 'none';
+});
+   // กัน TTL หมดตอนพิมพ์นาน ๆ
+document.getElementById('manualCode').addEventListener('input', (e) => {
+  touchFlow();
+  // บังคับตัวอักษรอังกฤษเป็นพิมพ์ใหญ่ (ตัวเลข/ขีดไม่กระทบ)
+  const el = e.target;
+  const pos = el.selectionStart;
+  const upper = el.value.toUpperCase();
+  if(el.value !== upper){
+    el.value = upper;
+    // พยายามคงตำแหน่งเคอร์เซอร์ไว้
+    if(pos !== null) el.setSelectionRange(pos, pos);
+  }
+});;
+
+document.getElementById('btnBackToCamera').onclick = async () => {
+  if(!guardFlowOrRestart()) return;
+  touchFlow();
+
+  isScanned = false;
+  const manual = document.getElementById('manualCode');
+  manual.blur();
+  manual.value = "";
+
+  document.getElementById('reader').style.display = 'block';
+  document.getElementById('overlay').style.display = 'block';
+  document.getElementById('message').style.display = 'block';
+
+  await stopCameraSafely();
+   await sleep(500);
+   await main();
+};
+
+document.getElementById('manualSubmit').onclick = async () => {
+  if(!guardFlowOrRestart()) return;
+  touchFlow();
+
+  const code = document.getElementById('manualCode').value.trim();
+  if(!code){
+    showAlertPopup("❌ กรุณากรอกข้อมูลด้วย", false);
+    return;
+  }
+  await processCode(code);
+};
+</script>
+</body>
+</html>
