@@ -212,7 +212,7 @@
   <h2>คุณลูกค้าอยู่จังหวัดใด</h2>
 
   <form id="surveyForm"
-    action="https://script.google.com/macros/s/AKfycbwSSxK4X0LmUgRkM-ZkRhcUXaClqnxq2Ou1qwJYIv_2k0iKBjZsit2UV8UV6yiJadvn/exec"
+    action="https://script.google.com/macros/s/AKfycbyI4L5rtLMwDLNvgvqXuReLS0aBF6kk6wD7mxMRiUTzyq5Ej26O8StNx5-CUR75Pjd_/exec"
     method="POST"
     target="hidden_iframe">
 
@@ -389,7 +389,7 @@ document.addEventListener("click", (e) => {
   
 async function main(){
   try{
-    await liff.init({ liffId: "2009304109-dIuHHv2A" });
+    await liff.init({ liffId: "2010043023-Y8xsy4hY" });
     if(!liff.isLoggedIn()) return liff.login();
 
     const profile = await liff.getProfile();
@@ -519,7 +519,7 @@ confirmNo.onclick = () => {
   el.select?.();
 };
 
-const POST_URL = "https://script.google.com/macros/s/AKfycbwSSxK4X0LmUgRkM-ZkRhcUXaClqnxq2Ou1qwJYIv_2k0iKBjZsit2UV8UV6yiJadvn/exec";
+const POST_URL = "https://script.google.com/macros/s/AKfycbyI4L5rtLMwDLNvgvqXuReLS0aBF6kk6wD7mxMRiUTzyq5Ej26O8StNx5-CUR75Pjd_/exec";
 
 let beaconSent = false;
 
