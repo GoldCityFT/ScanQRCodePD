@@ -344,15 +344,13 @@
     </div>
 
     <!-- 6 คำถามจิตวิทยา 1 -->
-    <label>เวลาคุณเลือกซื้อสินค้า ปัจจัยไหนสำคัญกับคุณมากที่สุด?</label>
-    <div class="helpText">เลือกได้ไม่เกิน 2 ข้อ</div>
+    <label>ถ้าคุณเลือกซื้อสินค้า สิ่งใดสำคัญกับคุณมากที่สุด?</label>
     <div class="choiceWrap" data-choice-wrap="Psychology1">
       <input
         type="text"
         id="Psychology1"
         name="Psychology1_Member"
         required
-        placeholder="เลือกได้ไม่เกิน 2 ข้อ"
         autocomplete="off"
         readonly
       />
@@ -750,7 +748,7 @@ async function main(){
 setupSingleChoiceDropdown("Gender", "genderDropdown", GENDER_OPTIONS, true);
 setupSingleChoiceDropdown("Age", "ageDropdown", AGE_OPTIONS, false);
 setupSingleChoiceDropdown("ShoeSize", "shoeSizeDropdown", SHOE_SIZE_OPTIONS, false);
-setupMultiChoiceDropdown("Psychology1", "psychology1Dropdown", PSYCHOLOGY1_OPTIONS, 2);
+setupSingleChoiceDropdown("Psychology1", "psychology1Dropdown", PSYCHOLOGY1_OPTIONS, false);
 setupSingleChoiceDropdown("Psychology2", "psychology2Dropdown", PSYCHOLOGY2_OPTIONS, false);
 setupSingleChoiceDropdown("Psychology3", "psychology3Dropdown", PSYCHOLOGY3_OPTIONS, false);  
 main();
@@ -894,10 +892,10 @@ if(!isValidProvinceExact(province)){
     return;
   }
 
-  if(psychology1.split(",").length > 2){
-    showModal("❌ คำถามปัจจัยในการซื้อสินค้าเลือกได้ไม่เกิน 2 ข้อ", () => focusInput("Psychology1"), "OK");
-    return;
-  }
+  if(!PSYCHOLOGY1_OPTIONS.includes(psychology1)){
+  showModal("❌ กรุณาเลือกปัจจัยสำคัญจากรายการที่กำหนด", () => focusInput("Psychology1"), "OK");
+  return;
+}
 
   if(!psychology2){
     showModal("❌ กรุณาเลือกกิจกรรมในวันหยุด", () => focusInput("Psychology2"), "OK");
