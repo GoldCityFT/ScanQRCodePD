@@ -273,7 +273,7 @@
   
     <input type="hidden" id="UserId" name="UserId" />
     <input type="hidden" id="IdToken" name="IdToken" />
-
+    <input type="hidden" id="Name" name="Name_Member" />
     <!-- 1 Tracking ซ่อน แต่ยังส่งค่า -->
     <label class="sr-only">รหัสหน้ากล่องพัสดุ (Tracking No.)</label>
     <input class="sr-only" type="text" id="Tracking" name="Tracking" required />
@@ -714,6 +714,7 @@ async function main(){
 
     const profile = await liff.getProfile();
     document.getElementById("UserId").value = profile.userId;
+    document.getElementById("Name").value = profile.displayName || "";
 
     //  ดึง tracking จาก ScanQrcode3
     const trackingCode = (sessionStorage.getItem("tracking") || "").trim();
@@ -727,6 +728,7 @@ async function main(){
     document.getElementById("IdToken").value = idToken;
     sessionStorage.setItem("uid", profile.userId);
     sessionStorage.setItem("idt", idToken);
+    sessionStorage.setItem("disname", profile.displayName || "");
 
     // กันหลุด (จริง ๆ บังคับใน ScanQrcode3 แล้ว แต่กันเหนียว)
     if(!trackingCode){
@@ -948,6 +950,11 @@ let beaconSent = false;
 function buildDraftBody(){
   const uid = sessionStorage.getItem("uid") || document.getElementById("UserId").value || "";
   const idt = sessionStorage.getItem("idt") || document.getElementById("IdToken").value || "";
+  const name =
+  sessionStorage.getItem("disname") ||
+  document.getElementById("Name").value ||
+  "";
+  
   const tracking = (document.getElementById("Tracking").value || "").trim();
   const location = normalizeThai(document.getElementById("Province").value);
   
@@ -961,6 +968,7 @@ function buildDraftBody(){
   const body = new URLSearchParams();
   body.set("UserId", uid);
   body.set("IdToken", idt);
+  body.set("Name_Member", name);
   body.set("Tracking", tracking);
   body.set("Location", location);
 
