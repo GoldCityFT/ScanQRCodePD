@@ -554,30 +554,20 @@ function setupSingleChoiceDropdown(inputId, dropdownId, options, allowCustom = f
       items = options.filter(item => item.includes(q));
     }
 
-    let html = "";
-
-    // ถ้ามีค่าแล้ว ให้มีตัวเลือกสำหรับล้างค่า
-    if(input.value){
-      html += `<div class="choiceItem" data-clear="1">ล้างค่า / เลือกใหม่</div>`;
-    }
-
     if(items.length === 0){
       if(allowCustom && q){
-        html += `<div class="choiceItem" data-value="${q}">ใช้ค่า: ${q}</div>`;
+        dropdown.innerHTML = `<div class="choiceItem" data-value="${q}">ใช้ค่า: ${q}</div>`;
       }else{
-        html += `<div class="choiceItem">ไม่พบรายการ</div>`;
+        dropdown.innerHTML = `<div class="choiceItem">ไม่พบรายการ</div>`;
       }
-
-      dropdown.innerHTML = html;
       dropdown.style.display = "block";
       return;
     }
 
-    html += items
+    dropdown.innerHTML = items
       .map(item => `<div class="choiceItem" data-value="${item}">${item}</div>`)
       .join("");
 
-    dropdown.innerHTML = html;
     dropdown.style.display = "block";
   }
 
@@ -586,7 +576,8 @@ function setupSingleChoiceDropdown(inputId, dropdownId, options, allowCustom = f
   }
 
   input.addEventListener("focus", () => {
-    render(input.value);
+    // เปิดมาให้เห็นตัวเลือกทั้งหมด เพื่อเลือกใหม่ทับค่าเดิมได้ทันที
+    render("");
 
     setTimeout(()=>{
       input.scrollIntoView({
@@ -596,9 +587,9 @@ function setupSingleChoiceDropdown(inputId, dropdownId, options, allowCustom = f
     },200);
   });
 
-  // เพิ่มอันนี้: กดซ้ำก็เปิด dropdown ได้ โดยเฉพาะ readonly บนมือถือ
   input.addEventListener("click", () => {
-    render(input.value);
+    // กดซ้ำก็เปิดตัวเลือกทั้งหมด
+    render("");
   });
 
   input.addEventListener("input", () => {
@@ -610,22 +601,10 @@ function setupSingleChoiceDropdown(inputId, dropdownId, options, allowCustom = f
     const item = e.target.closest(".choiceItem");
     if(!item) return;
 
-    // ล้างค่า
-    if(item.dataset.clear === "1"){
-      input.value = "";
-      hide();
-
-      setTimeout(() => {
-        input.focus();
-        render("");
-      }, 80);
-
-      return;
-    }
-
     const value = item.dataset.value;
     if(!value) return;
 
+    // เลือกใหม่แล้วทับค่าเดิมทันที
     input.value = value;
     hide();
 
